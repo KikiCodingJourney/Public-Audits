@@ -214,7 +214,7 @@ uint256 totalUSDborrowed = _USDborrowed +  (isoUSDLoaned[_collateralAddress][msg
 ```
 
 ### Impact
-Duo to a mistake made in the function `openLoan` in Vault_Synths, the variable totalUSDborrowed is wrongly calculated duo to the wrong mapping used. Which leads to the issue described in Vulnerability Detail.
+Duo to a mistake made in the function openLoan in Vault_Synths, the variable totalUSDborrowed is wrongly calculated duo to the wrong mapping used. Which leads to the issue described in Vulnerability Detail.
 
 You can see that the right mapping was used in another vault as vault_lyra.
 
