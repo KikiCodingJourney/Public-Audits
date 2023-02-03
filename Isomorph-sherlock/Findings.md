@@ -22,10 +22,10 @@
 
 ### [H-01] Malicious user can burn the approved NFTs to the depositer contract and successfully steal owner's AMM tokens.
 
-### Summary
+## Summary
 Malicious user can burn the approved NFTs to the depositer contract and successfully steal owner's AMM tokens.
 
-### Vulnerability Detail
+## Vulnerability Detail
 The purpose of the depositer contract is simple, anyone who calls the function makeNewDepositor in Templater.sol receives a new depositer contract and gets the ownership of it. The owner can deposit to gauge, withdraw from gauge and claim rewards accrued from the gauge.
 
 The functions depositToGauge, claimRewards are callable only by the owner of the contract and few of the rest of the functions
@@ -97,25 +97,25 @@ The owners who approve their NFTs to their own depositer contract in order to wi
 As anyone can call the function withdrawFromGauge and burn the approved NFTs and steal the AMM tokens.
 This will result in a big material loss, as owners will lose their NFTs by malicious users.
 
-### Impact
+## Impact
 Duo to the issue described in Vulnerability Detail any user can call the functions partialWithdrawFromGauge,
 withdrawFromGauge and successfully burn the approved NFTs to the depositer contract and steal the owner's AMM tokens equaled to the price of the NFTs.
 
-### Tool used
+## Tool used
 Manual Review
 
-### Recommendation
+## Recommendation
 
 My recommended change is: https://gist.github.com/CodingNameKiki/66b1d6a4c180b0f217644b555994f8ba
 
 
 ### [H-02] The variable totalUSDborrowed is wrongly calculated in the function openLoan in Vault_Synths. Users who want to increase their loans will receive less isoUSD.
 
-### Summary
+## Summary
 The variable totalUSDborrowed is wrongly calculated in the function openLoan in Vault_Synths.
 Users who want to increase their loans will receive less isoUSD.
 
-### Vulnerability Detail
+## Vulnerability Detail
 In the function openLoan, the variable totalUSDborrowed is wrongly calculated.
 With the issue occurring here, the wrong mapping isoUSDLoaned is used instead of isoUSDLoanAndInterest.
 And as how it is right now, the variable totalUSDborrowed will be equal to a wrong amount (bigger amount),
@@ -213,7 +213,7 @@ function openLoan(
 uint256 totalUSDborrowed = _USDborrowed +  (isoUSDLoaned[_collateralAddress][msg.sender] * virtualPrice)/LOAN_SCALE; 
 ```
 
-### Impact
+## Impact
 Duo to a mistake made in the function openLoan in Vault_Synths, the variable totalUSDborrowed is wrongly calculated duo to the wrong mapping used. Which leads to the issue described in Vulnerability Detail.
 
 You can see that the right mapping was used in another vault as vault_lyra.
@@ -224,20 +224,20 @@ Isomorph/contracts/Vault_Lyra.sol
 uint256 totalUSDborrowed = _USDborrowed +  (isoUSDLoanAndInterest[_collateralAddress][msg.sender] * virtualPrice)/LOAN_SCALE;
 ```
 
-### Tool used
+## Tool used
 Manual Review
 
-### Recommendation
+## Recommendation
 Fix the issue by using the right mapping:
 
 totalUSDborrowed = _USDborrowed +  (isoUSDLoanAndInterest[_collateralAddress][msg.sender] * virtualPrice)/LOAN_SCALE;
 
 ### [H-03] Owner won't be able to burn his NFTs and receive his AMM tokens back, duo to important missed check to ensure the NFTs burned were minted on this particular depositer contract.
 
-### Summary
+## Summary
 Owner won't be able to burn his NFTs and receive his AMM tokens back, duo to important missed check to ensure the NFTs burned were minted on this particular depositer contract.
 
-### Vulnerability Detail
+## Vulnerability Detail
 Every user who calls the function makeNewDepositor in Templater.sol receives a new depositer contract and the ownership of it.
 Every depositer contract has a different address and owner. The problem here is that the owner is the only one, who can deposit to gauge with the function depositToGauge, but anyone can call the functions partialWithdrawFromGauge, withdrawFromGauge and withdraw from gauge.
 
@@ -292,22 +292,22 @@ When Kiki decides to withdraw from gauge, he won't be able to do it as his contr
 This issue breaks the purpose of the contracts, as every NFT minted leads to its depositer contract with the mapping
 relatedDepositor and every NFT should only be burned on its own depositer contract to prevent issues like this occurring.
 
-### Impact
+## Impact
 Duo to the issue described in Vulnerability Detail, the owner of the contract won't be able to withdraw from gauge.
 
-### Tool used
+## Tool used
 Manual Review
 
-### Recommendation
+## Recommendation
 My recommended change: https://gist.github.com/CodingNameKiki/d0f989eaed118890799067ebe83b659c
 
 
 ### [M-01] Parameters of paused collateral tokens can't be changed.
 
-### Summary
+## Summary
 Parameters of paused collateral tokens can't be changed.
 
-### Vulnerability Detail
+## Vulnerability Detail
 As how it is now the function queueCollateralChange() can't be called on paused collateral, duo to the modifier collateralExists.
 This can be a problem if the following scenario occurs:
 
@@ -350,24 +350,24 @@ modifier collateralExists(address _collateralAddress){
  } 
 ```
 
-### Impact
+## Impact
 Duo to the issue described in "Vulnerability Detail", parameters of paused collateral tokens can't be changed if necessary.
 As the function queueCollateralChange() reverts, because of the modifier collateralExists.
 
-### Tool used
+## Tool used
 Manual Review
 
-### Recommendation
+## Recommendation
 Consider creating a new modifier which will be applied on the functions queueCollateralChange() and updateVirtualPriceSlowly() and can be called by paused collateral as well. https://gist.github.com/CodingNameKiki/7820aa470ada9bdc57dafdc466a08de6
 
 // Note having the modifier on updateVirtualPriceSlowly() has another plus, which is that the virtual price of temporary paused collateral tokens can be updated as well, so it won't lead to DOS.
 
 ### [M-02] Missing sanity check to ensure that the currency key isn't already used on existing collateral token.
 
-### Summary
+## Summary
 Missing sanity check to ensure that the currency key isn't already used on existing collateral token.
 
-### Vulnerability Detail
+## Vulnerability Detail
 There is no sanity check in the function addCollateralType() to ensure that the currency key isn't already used on an existing collateral token. As a result the currency key will lead to two collateral tokens and the address of the liquidity pool for the second collateral token will override the address of the liquidity pool from the first one in the mapping
 mapping(bytes32 => address) public liquidityPoolOf.
 
@@ -440,13 +440,13 @@ function _checkIfCollateralIsActive(bytes32 _currencyKey) internal view override
  } 
 ```
 
-### Impact
+## Impact
 The issue described in "Vulnerability Detail" can lead to problems occurring in the vault, as there is no sanity check in addCollateralType() to ensure that the currency key wasn't already used on other collateral token.
 
-### Tool used
+## Tool used
 Manual Review
 
-### Recommendation
+## Recommendation
 Add a sanity check to ensure that the currency key isn't already used on an existing token.
 
 https://gist.github.com/CodingNameKiki/33e2d63e73694e7eab35cb66db17b124
@@ -455,10 +455,10 @@ There seems to be missing check for that in the function queueCollateralChange()
 
 ### [M-03] CHANGE_COLLATERAL_DELAY contains a wrong number.
 
-### Summary
+## Summary
 CHANGE_COLLATERAL_DELAY contains a wrong number.
 
-### Vulnerability Detail
+## Vulnerability Detail
 As you can see by the comment next to it, CHANGE_COLLATERAL_DELAY is supposed to be 2 days.
 But as how it is right now the delay will be only 200 seconds.
 
@@ -472,22 +472,22 @@ As a result the require statement in the function changeCollateralType() can be 
 require(submissionTimestamp + CHANGE_COLLATERAL_DELAY <= block.timestamp, "Not enough time passed");
 ```
 
-### Impact
+## Impact
 This issue breaks the logic, as the "time delays" are important to the protocol.
 And leads to bypassing a certain require statement in a function in a short period of time than it's supposed to be.
 
-### Tool used
+## Tool used
 Manual Review
 
-### Recommendation
+## Recommendation
 Change to - uint256 public constant CHANGE_COLLATERAL_DELAY = 2 days;
 
 ### [L-01] Users can spam mint new NFTs in the function split in DepositReceipt_Base providing zero as _percentageSplit.
 
-### Summary
+## Summary
 Users can spam mint new NFTs in the function split in DepositReceipt_Base providing zero as _percentageSplit.
 
-### Vulnerability Detail
+## Vulnerability Detail
 l can't see how this will lead to anything bad, as how it is right now the only problem is that the variable currentLastId can be spammed like that. Certainly from looking over the code, splitting a NFT with zero _percentageSplit is forbidden, but the split function is lacking this require statement in DepositReceipt_Base.
 
 ```solidity
@@ -508,21 +508,21 @@ function split(uint256 _NFTId, uint256 _percentageSplit) external returns (uint2
     }
 ```
 
-### Impact
+## Impact
 Users can spam mint new NFTs with zero values
 
-### Tool used
+## Tool used
 Manual Review
 
-### Recommendation
+## Recommendation
 Add a require statement to prevent minting new NFTs with zero value.
 
 ### [L-02] Unused require statement in changeCollateralType()
 
-### Summary
+## Summary
 Unused require statement in changeCollateralType()
 
-### Vulnerability Detail
+## Vulnerability Detail
 As how it is the require statement is only useful for the first time someone calls changeCollateralType().
 require(submissionTimestamp != 0, "Uninitialized collateral change");
 Every time the function is called and collatoral type is changed, the variable submissionTimestamp should be updated to zero.
@@ -562,11 +562,11 @@ function changeCollateralType() external onlyAdmin {
         
     }
 ```
-### Impact
+## Impact
 The require statement in changeCollateralType() should be used, so no one can call the function and override the same params.
 
-### Tool used
+## Tool used
 Manual Review
 
-### Recommendation
+## Recommendation
 Update the variable submissionTimestamp to zero at the end of the function changeCollateralType().
