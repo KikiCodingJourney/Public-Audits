@@ -12,11 +12,11 @@
 | Count | Explanation | Risk |
 |:--:|:-------|:--:|
 | H-01 | Malicious user can burn the approved NFTs to the depositer contract and successfully steal owner's AMM tokens. | High |
-| H-02 | The variable `totalUSDborrowed` is wrongly calculated in the function openLoan in Vault_Synths. Users who want to increase their loans will receive less isoUSD. | High |
+| H-02 | The variable totalUSDborrowed is wrongly calculated in the function openLoan in Vault_Synths. Users who want to increase their loans will receive less isoUSD. | High |
 | H-03 | Owner won't be able to burn his NFTs and receive his AMM tokens back, duo to important missed check to ensure the NFTs burned were minted on this particular depositer contract. | High |
 | M-01 | Parameters of paused collateral tokens can't be changed. | Medium |
 | M-02 | Missing sanity check to ensure that the currency key isn't already used on existing collateral token. | Medium |
-| M-03 | `CHANGE_COLLATERAL_DELAY` contains a wrong number. | Medium |
+| M-03 | CHANGE_COLLATERAL_DELAY contains a wrong number. | Medium |
 | L-01 | Users can spam mint new NFTs in the function split in DepositReceipt_Base providing zero as _percentageSplit. | Low |
 | L-02 | Unused require statement in changeCollateralType(). | Low |
 
@@ -109,7 +109,7 @@ Manual Review
 My recommended change is: https://gist.github.com/CodingNameKiki/66b1d6a4c180b0f217644b555994f8ba
 
 
-### [H-02] The variable `totalUSDborrowed` is wrongly calculated in the function openLoan in Vault_Synths. Users who want to increase their loans will receive less isoUSD.
+### [H-02] The variable totalUSDborrowed is wrongly calculated in the function openLoan in Vault_Synths. Users who want to increase their loans will receive less isoUSD.
 
 ### Summary
 The variable totalUSDborrowed is wrongly calculated in the function openLoan in Vault_Synths.
@@ -453,7 +453,7 @@ https://gist.github.com/CodingNameKiki/33e2d63e73694e7eab35cb66db17b124
 
 There seems to be missing check for that in the function queueCollateralChange() too, might want to add the check there as well.
 
-### [M-03] `CHANGE_COLLATERAL_DELAY` contains a wrong number.
+### [M-03] CHANGE_COLLATERAL_DELAY contains a wrong number.
 
 ### Summary
 CHANGE_COLLATERAL_DELAY contains a wrong number.
