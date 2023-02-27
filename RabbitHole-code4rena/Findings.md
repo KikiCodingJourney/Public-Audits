@@ -5,15 +5,17 @@
 | M |  Medium risk | Unexpected behavior |
 | L  | Low risk | Potentially a risk |
 
-| Total Found Issues | 3 |
+| Total Found Issues | 4 |
 |:--:|:--:|
 
 ### Findings template
 | Count | Explanation | Risk |
 |:--:|:-------|:--:|
 | H-01 | Malicious user can send the quest reward tokens to the protocol fee contract preventing users from claiming their rewards. | High |
-| H-02 | In ERC1155 quests the owner withdraws all of the remaining tokens even for the unclaimed receipts. Leaving users who didn't claim their receipts before the quest end time unable to claim rewards. | High |
-| H-03 | Incase a malicious attack occurs and the quest is paused, the owner won't be able to withdraw some of his tokens back. | High |
+| M-01 | In ERC1155 quests the owner withdraws all of the remaining tokens even for the unclaimed receipts. Leaving users who didn't claim their receipts before the quest end time unable to claim rewards. | Medium |
+| M-02 | Incase a malicious attack occurs and the quest is paused, the owner won't be able to withdraw some of his tokens back. | Medium |
+| M-03 | In contract Quest the function `claim` shouldn't only set the receipt as claimed, but to burn it as well. As this problem brings the risk, where users can sell already claimed receipts to other people | Medium |
+| M-04 | The function `mintReceipt` should check if the quest has expired on-chain as well | Medium |
 
 ### [H-01] Malicious user can send the quest reward tokens to the protocol fee contract preventing users from claiming their rewards.
 
@@ -111,7 +113,7 @@ Consider applying the onlyOwner modifier on the function `withdrawFee`, so the f
 104:  }
 ```
 
-### [H-02] In ERC1155 quests the owner withdraws all of the remaining tokens even for the unclaimed receipts. Leaving users who didn't claim their receipts before the quest end time unable to claim rewards.
+### [M-01] In ERC1155 quests the owner withdraws all of the remaining tokens even for the unclaimed receipts. Leaving users who didn't claim their receipts before the quest end time unable to claim rewards.
 
 ## Impact
 In ERC1155 quests the owner is able to withdraw all of the remaining tokens even for the unclaimed receipts.
@@ -189,7 +191,7 @@ contracts/Erc1155Quest.sol
 63:    }
 ```
 
-### [H-03] Incase a malicious attack occurs and the quest is paused, the owner won't be able to withdraw some of his tokens back.
+### [M-02] Incase a malicious attack occurs and the quest is paused, the owner won't be able to withdraw some of his tokens back.
 
 ## Impact
 Incase a malicious attack occurs and the quest is paused, the owner won't be able to withdraw some of his tokens back, as a result the tokens will be stuck in the quest contract.
@@ -237,5 +239,102 @@ function withdrawRemainingTokens(address to_) public override onlyOwner {
          uint256 nonClaimableTokens = IERC20(rewardToken).balanceOf(address(this)) - protocolFee() - unclaimedTokens;
          IERC20(rewardToken).safeTransfer(to_, nonClaimableTokens);
         } 
+    }
+```
+
+### [M-03] In contract Quest the function `claim` shouldn't only set the receipt as claimed, but to burn it as well. As this problem brings the risk, where users can sell already claimed receipts to other people
+
+The function `claim` is used by users to claim their ERC721 receipts for rewards. By using the function the receipt is set as claimed with a simple mapping id => bool, but it isn't burned. In the protocol docs it is clearly stated that users are free to sell or trade their receipts. Since the claimed receipts aren't burned, this bring the risk where already claimed receipts can be sold to other people. A burn function already exists in RabbitHoleReceipt, but isn't used.
+
+### [M-04] The function mintReceipt should check if the quest has expired on-chain as well
+
+The main function mintReceipt responsible for minting receipts lacks an important check to ensure the quest end time hasn't finished yet. Considering the fact that on quest creation every quest is enforced with a startTime and endTime, which represents the quest starting time and ending time. Users should not be allowed to mint receipts after the quest is expired.
+
+By the sponsor comment, the `claimSignerAddress` takes care of that on the off-chain side and won't issue hashes before the quest start or after the quest ends. But mistakes always can occur and it is recommended to have a check on the smart contract level as well.
+
+```solidity
+contracts/QuestFactory.sol
+
+219:  function mintReceipt(string memory questId_, bytes32 hash_, bytes memory signature_) public {
+220:        if (quests[questId_].numberMinted + 1 > quests[questId_].totalParticipants) revert OverMaxAllowedToMint();
+221:        if (quests[questId_].addressMinted[msg.sender] == true) revert AddressAlreadyMinted();
+222:        if (keccak256(abi.encodePacked(msg.sender, questId_)) != hash_) revert InvalidHash();
+223:        if (recoverSigner(hash_, signature_) != claimSignerAddress) revert AddressNotSigned();
+224:
+225:        quests[questId_].addressMinted[msg.sender] = true;
+226:        quests[questId_].numberMinted++;
+227:        emit ReceiptMinted(msg.sender, questId_);
+228:        rabbitholeReceiptContract.mint(msg.sender, questId_);
+229:    }
+```
+
+Here is a recommended change, which takes care of this problem:
+
+1. Add a storage variable in the struct `Quest`, which will hold the end time of the quest.
+
+```solidity
+struct Quest {
+        mapping(address => bool) addressMinted;
+        address questAddress;
+        uint totalParticipants;
+        uint numberMinted;
++       uint256 expires;
+    }
+```
+
+2. When creating a quest with the function `createQuest` consider adding the endTime to the new stor variable `expires`.
+
+```solidity
+// Add the same check if contractType is erc1155 as well.
+
+if (keccak256(abi.encodePacked(contractType_)) == keccak256(abi.encodePacked('erc20'))) {
+            if (rewardAllowlist[rewardTokenAddress_] == false) revert RewardNotAllowed();
+
+            Erc20Quest newQuest = new Erc20Quest(
+                rewardTokenAddress_,
+                endTime_,
+                startTime_,
+                totalParticipants_,
+                rewardAmountOrTokenId_,
+                questId_,
+                address(rabbitholeReceiptContract),
+                questFee,
+                protocolFeeRecipient
+            );
+
+            emit QuestCreated(
+                msg.sender,
+                address(newQuest),
+                questId_,
+                contractType_,
+                rewardTokenAddress_,
+                endTime_,
+                startTime_,
+                totalParticipants_,
+                rewardAmountOrTokenId_
+            );
+            quests[questId_].questAddress = address(newQuest);
+            quests[questId_].totalParticipants = totalParticipants_;
++           quests[questId_].expires = endTime_;
+            newQuest.transferOwnership(msg.sender);
+            ++questIdCount;
+            return address(newQuest);
+        }
+```
+
+3. And finally add a check in the function `mintReceipt` to check if the quest expired already.
+
+```solidity
+function mintReceipt(string memory questId_, bytes32 hash_, bytes memory signature_) public {
++       if (quests[questId_].expires > block.timestamp) revert QuestAlreadyExpired();
+        if (quests[questId_].numberMinted + 1 > quests[questId_].totalParticipants) revert OverMaxAllowedToMint();
+        if (quests[questId_].addressMinted[msg.sender] == true) revert AddressAlreadyMinted();
+        if (keccak256(abi.encodePacked(msg.sender, questId_)) != hash_) revert InvalidHash();
+        if (recoverSigner(hash_, signature_) != claimSignerAddress) revert AddressNotSigned();
+
+        quests[questId_].addressMinted[msg.sender] = true;
+        quests[questId_].numberMinted++;
+        emit ReceiptMinted(msg.sender, questId_);
+        rabbitholeReceiptContract.mint(msg.sender, questId_);
     }
 ```
